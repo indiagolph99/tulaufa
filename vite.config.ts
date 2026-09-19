@@ -13,6 +13,11 @@ export default defineConfig({
 		})
 	],
 	server: {
+		// Pinned, not just preferred: the control daemon checks Origin against an
+		// exact list, so a silent fallback to 5174 breaks login. Failing to start
+		// is the better outcome — it points at the stale process holding the port.
+		port: 5173,
+		strictPort: true,
 		proxy: {
 			// In production nginx forwards this to the control daemon. Locally the
 			// dev server stands in, so /minecraft-admin works with `npm run dev`.
