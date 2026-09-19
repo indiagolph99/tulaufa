@@ -1,0 +1,47 @@
+name: Release
+
+# manual only — cut a dated release branch from stable
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Guard — stable only
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != "refs/heads/stable" ]; then
+            echo "::error::Release must be run from 'stable' (got ${REF#refs/heads/})"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v5
+        with:
+          ref: stable
+          fetch-depth: 0
+
+      - name: Cut release branch
+        run: |
+          set -euo pipefail
+          base="release/$(date -u +%Y-%m-%d)"
+          branch="$base"
+          n=2
+          # a second release on the same day gets .2, .3, ...
+          while git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; do
+            branch="$base.$n"
+            n=$((n + 1))
+          done
+
+          git switch -c "$branch"
+          git push origin "$branch"
+
+          sha="$(git rev-parse --short HEAD)"
+          echo "Cut **\`$branch\`** from \`stable\` at \`$sha\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Run **Deploy to VPS** with this branch selected to ship it." >> "$GITHUB_STEP_SUMMARY"
