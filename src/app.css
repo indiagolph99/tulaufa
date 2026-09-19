@@ -1,0 +1,30 @@
+:root {
+	/* darkening strength over the background photo */
+	--dim: 0.5;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	height: 100%;
+	margin: 0;
+}
+
+body {
+	display: grid;
+	place-items: center;
+	background: #101510 url('/bg.jpg') center / cover no-repeat fixed;
+	overflow: hidden;
+}
+
+/* darkening veil over the background */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, var(--dim));
+	pointer-events: none;
+}
