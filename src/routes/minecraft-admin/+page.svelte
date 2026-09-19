@@ -131,9 +131,11 @@
 
 <main>
 	{#if booting}
-		<p class="muted">Загрузка…</p>
+		<div class="panel panel-narrow">
+			<p class="muted">Загрузка…</p>
+		</div>
 	{:else if !authed}
-		<form onsubmit={onLogin}>
+		<form class="panel panel-narrow" onsubmit={onLogin}>
 			<h1>minecraft</h1>
 			<input
 				type="password"
@@ -146,68 +148,97 @@
 			{#if error}<p class="error">{error}</p>{/if}
 		</form>
 	{:else}
-		<header>
-			<h1>minecraft</h1>
-			<button class="link" onclick={onLogout}>выйти</button>
-		</header>
+		<div class="panel">
+			<header>
+				<h1>minecraft</h1>
+				<button class="link" onclick={onLogout}>выйти</button>
+			</header>
 
-		<section class="status">
-			{#if status}
-				<span class="badge {status.activeState}">{status.activeState}</span>
-				<dl>
-					<dt>состояние</dt>
-					<dd>{status.subState}</dd>
-					<dt>аптайм</dt>
-					<dd>{uptime(status.sinceUnix)}</dd>
-					<dt>память</dt>
-					<dd>{gib(status.memoryBytes)}</dd>
-					<dt>PID</dt>
-					<dd>{status.pid || '—'}</dd>
-				</dl>
-			{:else}
-				<p class="muted">Статус недоступен</p>
-			{/if}
-		</section>
+			<section class="status">
+				{#if status}
+					<span class="badge {status.activeState}">{status.activeState}</span>
+					<dl>
+						<dt>состояние</dt>
+						<dd>{status.subState}</dd>
+						<dt>аптайм</dt>
+						<dd>{uptime(status.sinceUnix)}</dd>
+						<dt>память</dt>
+						<dd>{gib(status.memoryBytes)}</dd>
+						<dt>PID</dt>
+						<dd>{status.pid || '—'}</dd>
+					</dl>
+				{:else}
+					<p class="muted">Статус недоступен</p>
+				{/if}
+			</section>
 
-		<section class="actions">
-			<button onclick={() => act('start')} disabled={busy !== null || status?.activeState === 'active'}>
-				{busy === 'start' ? '…' : 'Запустить'}
-			</button>
-			<button onclick={() => act('restart')} disabled={busy !== null}>
-				{busy === 'restart' ? '…' : 'Перезапустить'}
-			</button>
-			<button
-				class="danger"
-				onclick={() => act('stop')}
-				disabled={busy !== null || status?.activeState !== 'active'}
-			>
-				{busy === 'stop' ? '…' : 'Остановить'}
-			</button>
-		</section>
+			<section class="actions">
+				<button
+					onclick={() => act('start')}
+					disabled={busy !== null || status?.activeState === 'active'}
+				>
+					{busy === 'start' ? '…' : 'Запустить'}
+				</button>
+				<button onclick={() => act('restart')} disabled={busy !== null}>
+					{busy === 'restart' ? '…' : 'Перезапустить'}
+				</button>
+				<button
+					class="danger"
+					onclick={() => act('stop')}
+					disabled={busy !== null || status?.activeState !== 'active'}
+				>
+					{busy === 'stop' ? '…' : 'Остановить'}
+				</button>
+			</section>
 
-		{#if error}<p class="error">{error}</p>{/if}
+			{#if error}<p class="error">{error}</p>{/if}
 
-		<section class="logs">
-			<div class="logs-head">
-				<label><input type="checkbox" bind:checked={follow} /> следить</label>
-				<button class="link" onclick={() => (lines = [])}>очистить</button>
-				{#if streamDown}<span class="error">поток логов оборвался</span>{/if}
-			</div>
-			<div class="pane" bind:this={logPane}>
-				{#each lines as line, i (i)}<div class="line">{line}</div>{/each}
-				{#if lines.length === 0}<p class="muted">Ждём строк…</p>{/if}
-			</div>
-		</section>
+			<section class="logs">
+				<div class="logs-head">
+					<label><input type="checkbox" bind:checked={follow} /> следить</label>
+					<button class="link" onclick={() => (lines = [])}>очистить</button>
+					{#if streamDown}<span class="error">поток логов оборвался</span>{/if}
+				</div>
+				<div class="pane" bind:this={logPane}>
+					{#each lines as line, i (i)}<div class="line">{line}</div>{/each}
+					{#if lines.length === 0}<p class="muted">Ждём строк…</p>{/if}
+				</div>
+			</section>
+		</div>
 	{/if}
 </main>
 
 <style>
+	/* The landing page pins the viewport; this one has a panel that can outgrow
+	   it, so let the page scroll and sit at the top instead of being centred. */
+	:global(body) {
+		overflow-y: auto;
+		align-content: start;
+	}
+
 	main {
 		width: min(100%, 60rem);
 		margin: 0 auto;
 		padding: 2rem 1rem 3rem;
 		color: #e8efe8;
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	}
+
+	/* The background photo is busy and light in places, so the UI sits on an
+	   opaque surface rather than trying to compete with it. */
+	.panel {
+		padding: 1.5rem;
+		border: 1px solid #38472f;
+		border-radius: 0.75rem;
+		background: #10160f;
+		box-shadow:
+			0 1.5rem 3rem rgba(0, 0, 0, 0.55),
+			0 0 0 1px rgba(0, 0, 0, 0.4);
+	}
+
+	.panel-narrow {
+		width: min(100%, 22rem);
+		margin: 12vh auto 0;
 	}
 
 	h1 {
@@ -228,24 +259,27 @@
 	form {
 		display: grid;
 		gap: 0.75rem;
-		max-width: 20rem;
-		margin: 15vh auto 0;
 	}
 
 	input[type='password'] {
 		padding: 0.6rem 0.75rem;
 		border: 1px solid #4a5a4a;
 		border-radius: 0.375rem;
-		background: rgba(0, 0, 0, 0.45);
+		background: #060906;
 		color: inherit;
 		font: inherit;
+	}
+
+	input[type='password']:focus-visible {
+		outline: 2px solid #8fbf8f;
+		outline-offset: 1px;
 	}
 
 	button {
 		padding: 0.55rem 0.9rem;
 		border: 1px solid #4a5a4a;
 		border-radius: 0.375rem;
-		background: rgba(0, 0, 0, 0.45);
+		background: #1a231a;
 		color: inherit;
 		font: inherit;
 		cursor: pointer;
@@ -281,7 +315,7 @@
 		padding: 1rem;
 		border: 1px solid #3a4a3a;
 		border-radius: 0.5rem;
-		background: rgba(0, 0, 0, 0.45);
+		background: #0a0f0a;
 	}
 
 	.badge {
@@ -342,7 +376,7 @@
 		padding: 0.75rem;
 		border: 1px solid #3a4a3a;
 		border-radius: 0.5rem;
-		background: rgba(0, 0, 0, 0.6);
+		background: #060906;
 		font-size: 0.78rem;
 		line-height: 1.45;
 	}
