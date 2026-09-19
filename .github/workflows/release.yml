@@ -55,21 +55,20 @@ jobs:
           set -euo pipefail
 
           # nothing to merge back if main already matches — branch still deploys
-          if [ -z "$(git log --oneline origin/main.."$BRANCH")" ]; then
-            echo "no_pr=1" >> "$GITHUB_OUTPUT"
+          if [ -z "$(git log --oneline "origin/main..$BRANCH")" ]; then
             echo "::notice::main is already up to date with $BRANCH — no PR opened."
             exit 0
           fi
 
-          url="$(gh pr create \
-            --base main \
-            --head "$BRANCH" \
-            --title "Release $BRANCH" \
-            --body "Релиз, срезанный с \`stable\`.
+          # every line must stay indented inside this block scalar: a line at
+          # column 0 ends the block and corrupts the rest of the file
+          body="$(printf '%s\n' \
+            "Релиз, срезанный с \`stable\`." \
+            "" \
+            "Развернуть: запустите **Deploy to VPS** с веткой \`$BRANCH\`." \
+            "Влейте этот PR, чтобы \`main\` отражал то, что уехало в продакшен.")"
 
-Развернуть: запустите **Deploy to VPS** с выбранной веткой \`$BRANCH\`.
-Влейте этот PR, чтобы \`main\` отражал то, что уехало в продакшен." )"
-
+          url="$(gh pr create --base main --head "$BRANCH" --title "Release $BRANCH" --body "$body")"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Summary
