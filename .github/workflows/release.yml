@@ -1,11 +1,12 @@
 name: Release
 
-# manual only — cut a dated release branch from stable
+# manual only — cut a dated release branch from stable and open its PR
 on:
   workflow_dispatch:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   release:
@@ -27,6 +28,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cut release branch
+        id: cut
         run: |
           set -euo pipefail
           base="release/$(date -u +%Y-%m-%d)"
@@ -41,7 +43,49 @@ jobs:
           git switch -c "$branch"
           git push origin "$branch"
 
-          sha="$(git rev-parse --short HEAD)"
-          echo "Cut **\`$branch\`** from \`stable\` at \`$sha\`." >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Run **Deploy to VPS** with this branch selected to ship it." >> "$GITHUB_STEP_SUMMARY"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Open release PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.cut.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          # nothing to merge back if main already matches — branch still deploys
+          if [ -z "$(git log --oneline origin/main.."$BRANCH")" ]; then
+            echo "no_pr=1" >> "$GITHUB_OUTPUT"
+            echo "::notice::main is already up to date with $BRANCH — no PR opened."
+            exit 0
+          fi
+
+          url="$(gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Release $BRANCH" \
+            --body "Релиз, срезанный с \`stable\`.
+
+Развернуть: запустите **Deploy to VPS** с выбранной веткой \`$BRANCH\`.
+Влейте этот PR, чтобы \`main\` отражал то, что уехало в продакшен." )"
+
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        env:
+          BRANCH: ${{ steps.cut.outputs.branch }}
+          SHA: ${{ steps.cut.outputs.sha }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+        run: |
+          {
+            echo "Cut **\`$BRANCH\`** from \`stable\` at \`$SHA\`."
+            echo ""
+            if [ -n "${PR_URL:-}" ]; then
+              echo "PR: $PR_URL"
+            else
+              echo "_No PR — \`main\` already matches this branch._"
+            fi
+            echo ""
+            echo "Run **Deploy to VPS** with \`$BRANCH\` selected to ship it."
+          } >> "$GITHUB_STEP_SUMMARY"
