@@ -1,5 +1,5 @@
 :root {
-	/* darkening strength over the background photo */
+	/* darkening strength over the background photo: 0 = untouched, 1 = black */
 	--dim: 0.5;
 }
 
