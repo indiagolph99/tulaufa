@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: deploy
 
 # manual only. the gate is the 'production' environment, not a branch guard:
 # GitHub holds the run for approval and refuses any ref outside its branch policy.
