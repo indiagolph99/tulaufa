@@ -16,15 +16,12 @@ body {
 body {
 	display: grid;
 	place-items: center;
-	background: #101510 url('/bg.jpg') center / cover no-repeat fixed;
+	/* the dim is a layer of the background itself, stacked over the photo, so it
+	   never touches page content the way an overlay element would */
+	background:
+		linear-gradient(rgba(0, 0, 0, var(--dim)), rgba(0, 0, 0, var(--dim))) center / cover no-repeat
+			fixed,
+		url('/bg.jpg') center / cover no-repeat fixed,
+		#101510;
 	overflow: hidden;
-}
-
-/* darkening veil over the background */
-body::before {
-	content: '';
-	position: fixed;
-	inset: 0;
-	background: rgba(0, 0, 0, var(--dim));
-	pointer-events: none;
 }
