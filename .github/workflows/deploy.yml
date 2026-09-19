@@ -1,32 +1,28 @@
 name: Deploy to VPS
 
-# manual only, and only from a release/* branch (see the guard below)
+# manual only. the gate is the 'production' environment, not a branch guard:
+# GitHub holds the run for approval and refuses any ref outside its branch policy.
 on:
   workflow_dispatch:
 
-# never let two deploys race each other onto the same docroot
 concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: write # to push the release tag
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://tulaufa.ru
 
     steps:
-      - name: Guard — release branches only
-        env:
-          REF: ${{ github.ref }}
-        run: |
-          case "$REF" in
-            refs/heads/release/*)
-              echo "Deploying from ${REF#refs/heads/}" ;;
-            *)
-              echo "::error::Deploy only runs from a release/* branch (got ${REF#refs/heads/}). Cut one with the Release workflow on stable."
-              exit 1 ;;
-          esac
-
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v5
         with:
@@ -58,3 +54,30 @@ jobs:
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p $DEPLOY_PORT -o StrictHostKeyChecking=yes" \
             build/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH"
+
+      - name: Tag this release
+        id: tag
+        run: |
+          set -euo pipefail
+          base="v$(date -u +%Y.%m.%d)"
+          tag="$base"
+          n=2
+          # a second deploy the same day gets .2, .3, ...
+          while git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; do
+            tag="$base.$n"
+            n=$((n + 1))
+          done
+
+          git tag -a "$tag" -m "Deployed to tulaufa.ru"
+          git push origin "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          {
+            echo "Deployed \`$TAG\` to <https://tulaufa.ru>."
+            echo ""
+            echo "Docroot now mirrors \`build/\` exactly."
+          } >> "$GITHUB_STEP_SUMMARY"
