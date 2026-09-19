@@ -59,6 +59,11 @@ jobs:
         id: tag
         run: |
           set -euo pipefail
+
+          # annotated tags need a committer; runners have none configured
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
           base="v$(date -u +%Y.%m.%d)"
           tag="$base"
           n=2
