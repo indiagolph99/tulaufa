@@ -11,5 +11,14 @@ export default defineConfig({
 			},
 			adapter: adapter()
 		})
-	]
+	],
+	server: {
+		proxy: {
+			// In production nginx forwards this to the control daemon. Locally the
+			// dev server stands in, so /minecraft-admin works with `npm run dev`.
+			// changeOrigin stays off on purpose: the daemon checks that Origin
+			// matches ALLOWED_ORIGIN, which must be the dev server's own address.
+			'/api/mc': { target: 'http://127.0.0.1:8787', changeOrigin: false }
+		}
+	}
 });
